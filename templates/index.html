@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QNA Scoring Interface - IFD Based Evaluation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .status-indicator.connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-indicator.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            background-color: #f0f4ff;
+            border-color: #764ba2;
+        }
+
+        .upload-area.dragover {
+            background-color: #e8eeff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            color: #333;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 12px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background-color: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .results-section {
+            grid-column: 1 / -1;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+            border-bottom: 2px solid #ddd;
+            font-size: 13px;
+            color: #333;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            font-size: 13px;
+        }
+
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .tier-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .tier-easy {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .tier-medium {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .tier-hard {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .value-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .value-high {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .value-medium {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .value-low {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .score {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .filter-section {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .insights {
+            background-color: #e8eeff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+
+        .insights ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .insights li {
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .insights li:before {
+            content: "→ ";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 QNA Scoring Interface</h1>
+            <p class="subtitle">IFD-Based Q&A Pair Evaluation using Cherry_LLM methodology</p>
+            <div id="status" class="status-indicator disconnected">Checking connection...</div>
+        </header>
+
+        <main>
+            <!-- Upload Section -->
+            <div class="card">
+                <h2>1. Upload Q&A Pairs</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">Drag and drop or click to upload</div>
+                    <div class="upload-hint">Supports JSON or CSV format</div>
+                </div>
+                <input type="file" id="fileInput" accept=".json,.csv">
+                <div id="uploadMessage"></div>
+            </div>
+
+            <!-- Settings Section -->
+            <div class="card">
+                <h2>2. Settings</h2>
+                <div class="form-group">
+                    <label>Minimum IFD Score</label>
+                    <input type="number" id="minIfdScore" min="0" max="1" step="0.1" value="0.4" placeholder="0.4">
+                </div>
+                <div class="form-group">
+                    <label>Maximum IFD Score</label>
+                    <input type="number" id="maxIfdScore" min="0" max="1" step="0.1" value="1.0" placeholder="1.0">
+                </div>
+                <div class="form-group">
+                    <label>Difficulty Tiers</label>
+                    <div style="display: flex; gap: 10px;">
+                        <label style="flex: 1; font-weight: normal; margin: 0;">
+                            <input type="checkbox" id="tierEasy" checked> Easy
+                        </label>
+                        <label style="flex: 1; font-weight: normal; margin: 0;">
+                            <input type="checkbox" id="tierMedium" checked> Medium
+                        </label>
+                        <label style="flex: 1; font-weight: normal; margin: 0;">
+                            <input type="checkbox" id="tierHard" checked> Hard
+                        </label>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="scoreBtn">Score Pairs</button>
+                <button class="btn btn-secondary" id="filterBtn" disabled>Apply Filters</button>
+                
+                <!-- Timing Display -->
+                <div id="timingDisplay" style="display: none; margin-top: 15px; padding: 15px; background: #f0f4ff; border-radius: 8px; border-left: 4px solid #667eea;">
+                    <div style="font-size: 14px; color: #666;">
+                        <div>⏱️ <strong>Time Elapsed:</strong> <span id="elapsedTime">0.0s</span></div>
+                        <div>⏳ <strong>Est. Remaining:</strong> <span id="remainingTime">--</span></div>
+                        <div>✓ <strong>Total Est.:</strong> <span id="totalTime">--</span></div>
+                        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
+                            <strong id="pairsProcessed">0 / 0</strong> pairs scored
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="card results-section" id="resultsSection" style="display: none;">
+                <h2>3. Results</h2>
+                <div id="timingInfo" style="padding: 15px; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #4caf50; margin-bottom: 20px; display: none;">
+                    <strong>✓ Scoring Complete!</strong><br>
+                    <span id="finalTiming"></span>
+                </div>
+                <div id="statsContainer"></div>
+                <div class="filter-section">
+                    <button class="btn btn-success" id="downloadBtn" disabled>Download Scored Pairs</button>
+                </div>
+                <div id="tableContainer"></div>
+                <div id="insightsContainer"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let uploadedPairs = [];
+        let scoredPairs = [];
+        let filename = '';
+
+        // Setup drag and drop
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/api/upload-pairs', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    showMessage('uploadMessage', data.error, 'error');
+                } else {
+                    filename = data.filename;
+                    uploadedPairs = data.pairs;
+                    showMessage('uploadMessage', `✓ Loaded ${data.count} Q&A pairs`, 'success');
+                    document.getElementById('scoreBtn').disabled = false;
+                }
+            })
+            .catch(err => showMessage('uploadMessage', 'Error uploading file: ' + err.message, 'error'));
+        }
+
+        document.getElementById('scoreBtn').addEventListener('click', () => {
+            if (uploadedPairs.length === 0) {
+                showMessage('uploadMessage', 'Please upload Q&A pairs first', 'error');
+                return;
+            }
+
+            const scoreBtn = document.getElementById('scoreBtn');
+            scoreBtn.disabled = true;
+            scoreBtn.innerHTML = '<span class="spinner"></span>Scoring...';
+            
+            // Show timing display
+            const timingDisplay = document.getElementById('timingDisplay');
+            timingDisplay.style.display = 'block';
+            
+            const startTime = Date.now();
+            let updateInterval;
+            
+            // Update timing display every 100ms
+            updateInterval = setInterval(() => {
+                const elapsed = (Date.now() - startTime) / 1000;
+                document.getElementById('elapsedTime').textContent = elapsed.toFixed(1) + 's';
+            }, 100);
+
+            fetch('/api/score-pairs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pairs: uploadedPairs,
+                    source_text: '',
+                    batch_size: 10
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                clearInterval(updateInterval);
+                
+                if (data.error) {
+                    showMessage('uploadMessage', 'Scoring error: ' + data.error, 'error');
+                } else {
+                    scoredPairs = data.pairs;
+                    
+                    // Display timing information
+                    const timing = data.timing || {};
+                    const totalTime = timing.total_time_seconds || 0;
+                    const timePerPair = timing.time_per_pair_ms || 0;
+                    
+                    document.getElementById('elapsedTime').textContent = totalTime.toFixed(2) + 's';
+                    document.getElementById('remainingTime').textContent = '0s';
+                    document.getElementById('totalTime').textContent = totalTime.toFixed(2) + 's';
+                    document.getElementById('pairsProcessed').textContent = `${data.pairs.length} / ${uploadedPairs.length}`;
+                    
+                    // Show final timing in results
+                    const timingInfo = document.getElementById('timingInfo');
+                    timingInfo.style.display = 'block';
+                    document.getElementById('finalTiming').innerHTML = 
+                        `Time: <strong>${totalTime.toFixed(2)}s</strong> | ` +
+                        `Speed: <strong>${timePerPair.toFixed(1)}ms/pair</strong> | ` +
+                        `Method: <strong>Batch Scoring (${timing.batch_size} per batch)</strong>`;
+                    
+                    displayResults(data.pairs, data.statistics);
+                    document.getElementById('filterBtn').disabled = false;
+                    document.getElementById('downloadBtn').disabled = false;
+                }
+                scoreBtn.disabled = false;
+                scoreBtn.innerHTML = 'Score Pairs';
+            })
+            .catch(err => {
+                showMessage('uploadMessage', 'Error: ' + err.message, 'error');
+                scoreBtn.disabled = false;
+                scoreBtn.innerHTML = 'Score Pairs';
+            });
+        });
+
+        document.getElementById('filterBtn').addEventListener('click', () => {
+            const minIfd = parseFloat(document.getElementById('minIfdScore').value);
+            const maxIfd = parseFloat(document.getElementById('maxIfdScore').value);
+            const tiers = [];
+            if (document.getElementById('tierEasy').checked) tiers.push('easy');
+            if (document.getElementById('tierMedium').checked) tiers.push('medium');
+            if (document.getElementById('tierHard').checked) tiers.push('hard');
+
+            fetch('/api/filter-pairs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pairs: scoredPairs,
+                    min_ifd_score: minIfd,
+                    max_ifd_score: maxIfd,
+                    tiers: tiers,
+                    value_categories: ['low', 'medium', 'high']
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    showMessage('tableContainer', 'Filter error: ' + data.error, 'error');
+                } else {
+                    showMessage('tableContainer', `✓ Filtered to ${data.count} pairs (from ${data.original_count})`, 'success');
+                    displayTable(data.filtered_pairs);
+                }
+            })
+            .catch(err => showMessage('tableContainer', 'Error: ' + err.message, 'error'));
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            fetch('/api/download-scored-pairs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pairs: scoredPairs,
+                    filename: filename
+                })
+            })
+            .then(r => r.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename.replace('.json', '').replace('.csv', '') + '_scored.csv';
+                a.click();
+            })
+            .catch(err => showMessage('tableContainer', 'Download error: ' + err.message, 'error'));
+        });
+
+        function displayResults(pairs, stats) {
+            document.getElementById('resultsSection').style.display = 'block';
+            displayStats(stats);
+            displayTable(pairs);
+            displayInsights(stats);
+        }
+
+        function displayStats(stats) {
+            const html = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.total}</div>
+                        <div class="stat-label">Total Pairs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.avg_ifd_score.toFixed(2)}</div>
+                        <div class="stat-label">Avg IFD Score</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.high_value}</div>
+                        <div class="stat-label">High Value</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.difficulty_distribution.easy}</div>
+                        <div class="stat-label">Easy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.difficulty_distribution.medium}</div>
+                        <div class="stat-label">Medium</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.difficulty_distribution.hard}</div>
+                        <div class="stat-label">Hard</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('statsContainer').innerHTML = html;
+        }
+
+        function displayTable(pairs) {
+            const html = `
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Question</th>
+                                <th>Answer</th>
+                                <th>IFD Score</th>
+                                <th>Tier</th>
+                                <th>Value</th>
+                                <th>Conditioned</th>
+                                <th>Direct</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${pairs.map(p => `
+                                <tr>
+                                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(p.question)}</td>
+                                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(p.answer)}</td>
+                                    <td class="score">${(p.ifd_score || 0).toFixed(3)}</td>
+                                    <td><span class="tier-badge tier-${p.tier}">${p.tier.toUpperCase()}</span></td>
+                                    <td><span class="value-badge value-${p.value_category}">${p.value_category.toUpperCase()}</span></td>
+                                    <td>${(p.conditioned_score || 0).toFixed(2)}</td>
+                                    <td>${(p.direct_score || 0).toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('tableContainer').innerHTML = html;
+        }
+
+        function displayInsights(stats) {
+            const html = `
+                <div class="insights">
+                    <strong>📊 Dataset Insights:</strong>
+                    <ul>
+                        ${stats.difficulty_distribution ? `
+                            <li>Difficulty: ${stats.difficulty_distribution.easy} easy, ${stats.difficulty_distribution.medium} medium, ${stats.difficulty_distribution.hard} hard</li>
+                        ` : ''}
+                        ${stats.high_value ? `
+                            <li>High-value pairs: ${stats.high_value} (${((stats.high_value / stats.total) * 100).toFixed(1)}%)</li>
+                        ` : ''}
+                        <li>IFD Range: ${stats.min_ifd_score.toFixed(3)} - ${stats.max_ifd_score.toFixed(3)}</li>
+                    </ul>
+                </div>
+            `;
+            document.getElementById('insightsContainer').innerHTML = html;
+        }
+
+        function showMessage(elementId, msg, type) {
+            const el = document.getElementById(elementId);
+            const className = type === 'error' ? 'error-message' : 'success-message';
+            el.innerHTML = `<div class="${className}">${msg}</div>`;
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Check connection on load
+        fetch('/api/verify-connection')
+            .then(r => r.json())
+            .then(data => {
+                const status = document.getElementById('status');
+                if (data.connected) {
+                    status.className = 'status-indicator connected';
+                    status.textContent = `✓ Connected to ${data.model}`;
+                } else {
+                    status.className = 'status-indicator disconnected';
+                    status.textContent = `✗ ${data.error}`;
+                }
+            });
+    </script>
+</body>
+</html>
+
